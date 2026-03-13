@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, Loader2, Download, Edit2, Check, Copy } from 'lucide-react';
-import { useReactToPrint } from 'react-to-print';
+import html2pdf from 'html2pdf.js';
 import { ResumeData } from './types';
 import { parseResume } from './services/geminiService';
 import { extractTextFromPDF } from './utils/pdfParser';
@@ -14,13 +14,53 @@ export default function App() {
   const [rawText, setRawText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState('');
   
   const componentRef = useRef<HTMLDivElement>(null);
   
-  const handlePrint = useReactToPrint({
-    contentRef: componentRef,
-    documentTitle: resumeData ? `${resumeData.name.replace(/\s+/g, '_')}_Resume` : 'Resume',
-  });
+  const handlePrint = async () => {
+    if (!componentRef.current) return;
+    
+    setIsLoading(true);
+    setProgress(50);
+    setProgressText('Generating PDF...');
+    
+    const element = componentRef.current;
+    const filename = resumeData?.name ? `${resumeData.name.replace(/\s+/g, '_')}_Resume.pdf` : 'Resume.pdf';
+    
+    const opt = {
+      margin:       0,
+      filename:     filename,
+      image:        { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, logging: false },
+      jsPDF:        { unit: 'mm' as const, format: 'a4', orientation: 'portrait' as const },
+      pagebreak:    { mode: 'css', before: '.print\\:break-before-page', avoid: '.print\\:break-inside-avoid' }
+    };
+    
+    // Create a clone to avoid modifying the actual DOM
+    const clone = element.cloneNode(true) as HTMLElement;
+    
+    // We need to make sure the clone is visible for html2canvas but off-screen
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.top = '0';
+    // Ensure it has the exact A4 dimensions for the PDF
+    clone.style.width = '210mm';
+    clone.style.minHeight = '297mm';
+    
+    document.body.appendChild(clone);
+    
+    try {
+      await html2pdf().set(opt).from(clone).save();
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      setError('Failed to generate PDF');
+    } finally {
+      document.body.removeChild(clone);
+      setIsLoading(false);
+    }
+  };
 
   const handleCopy = () => {
     if (!componentRef.current) return;
@@ -49,26 +89,29 @@ export default function App() {
 
     setIsLoading(true);
     setError(null);
+    setProgress(5);
+    setProgressText('Reading file...');
 
     try {
       let text = '';
       if (file.type === 'application/pdf') {
+        setProgressText('Extracting text from PDF...');
+        setProgress(15);
         text = await extractTextFromPDF(file);
       } else {
         text = await file.text();
       }
       
       setRawText(text);
-      await processText(text);
+      await processText(text, true);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Failed to process file');
-    } finally {
       setIsLoading(false);
     }
   };
 
-  const processText = async (text: string) => {
+  const processText = async (text: string, isFromFile = false) => {
     if (!text.trim()) {
       setError('Please provide some text to process.');
       return;
@@ -76,13 +119,38 @@ export default function App() {
     
     setIsLoading(true);
     setError(null);
+    
+    if (!isFromFile) {
+      setProgress(10);
+      setProgressText('Preparing text...');
+    }
+    
+    // Small delay to allow UI to update
+    await new Promise(r => setTimeout(r, 100));
+    
+    setProgress(30);
+    setProgressText('Analyzing content with AI (this takes about 10-15 seconds)...');
+    
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 95) return 95;
+        return prev + (95 - prev) * 0.05; // Asymptotic approach to 95%
+      });
+    }, 500);
+
     try {
       const data = await parseResume(text);
+      clearInterval(interval);
+      setProgress(100);
+      setProgressText('Formatting results...');
+      await new Promise(r => setTimeout(r, 400)); // Let user see 100%
       setResumeData(data);
     } catch (err) {
+      clearInterval(interval);
       console.error(err);
       setError('Failed to parse resume with AI. Please try again.');
     } finally {
+      clearInterval(interval);
       setIsLoading(false);
     }
   };
@@ -179,10 +247,21 @@ export default function App() {
         )}
 
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-24">
-            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-            <h3 className="text-xl font-medium text-gray-900">Processing Resume...</h3>
-            <p className="text-gray-500 mt-2">Our AI is extracting and formatting your data.</p>
+          <div className="flex flex-col items-center justify-center py-24 max-w-md mx-auto">
+            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-6" />
+            <h3 className="text-xl font-medium text-gray-900 mb-4">Processing Resume</h3>
+            
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2 overflow-hidden">
+              <div 
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            
+            <div className="flex justify-between w-full text-sm text-gray-500">
+              <span>{progressText}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
           </div>
         )}
 

@@ -9,11 +9,16 @@ export const ResumePreview = forwardRef<HTMLDivElement, Props>(({ data }, ref) =
   return (
     <div 
       ref={ref} 
-      className="bg-white w-[210mm] min-h-[297mm] mx-auto shadow-xl print:shadow-none print:w-full print:h-full relative text-black font-sans"
+      className="bg-[#ffffff] w-[210mm] min-h-[297mm] mx-auto relative text-[#000000] font-sans pb-40"
     >
+      {/* Header */}
+      <div className="w-full print:break-inside-avoid">
+        <img src="/header.png" alt="Newxel Header" className="w-full block" />
+      </div>
+
       {/* Content */}
-      <div className="px-16 py-16">
-        <h1 className="text-xl font-bold uppercase tracking-wide text-gray-900 mb-2">
+      <div className="px-16 py-12">
+        <h1 className="text-xl font-bold uppercase tracking-wide text-[#111827] mb-2">
           {data.jobTitle}
         </h1>
         <h2 className="text-4xl font-bold uppercase tracking-wider mb-10">
@@ -48,7 +53,7 @@ export const ResumePreview = forwardRef<HTMLDivElement, Props>(({ data }, ref) =
                 <div key={index} className="print:break-inside-avoid">
                   <h4 className="font-bold text-base">{exp.role}</h4>
                   <h5 className="font-bold text-base uppercase">{exp.company}</h5>
-                  <p className="text-sm text-gray-800 mb-4">{exp.dates}</p>
+                  <p className="text-sm text-[#1f2937] mb-4">{exp.dates}</p>
                   <p className="text-sm mb-4 leading-relaxed">{exp.description}</p>
                   
                   {exp.responsibilities && exp.responsibilities.length > 0 && (
@@ -81,7 +86,7 @@ export const ResumePreview = forwardRef<HTMLDivElement, Props>(({ data }, ref) =
                 <div key={index}>
                   <h4 className="font-bold text-base">{edu.degree}</h4>
                   <p className="text-sm">{edu.institution}</p>
-                  <p className="text-sm text-gray-800">{edu.dates}</p>
+                  <p className="text-sm text-[#1f2937]">{edu.dates}</p>
                 </div>
               ))}
             </div>
@@ -100,6 +105,11 @@ export const ResumePreview = forwardRef<HTMLDivElement, Props>(({ data }, ref) =
             </div>
           </div>
         )}
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-0 left-0 w-full print:break-inside-avoid">
+        <img src="/footer.png" alt="Newxel Footer" className="w-full block" />
       </div>
     </div>
   );
