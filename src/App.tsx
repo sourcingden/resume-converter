@@ -180,13 +180,6 @@ export default function App() {
                 {isCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                 <span className={isCopied ? "text-green-600" : ""}>{isCopied ? 'Copied!' : 'Copy Text'}</span>
               </button>
-              <button
-                onClick={() => handlePrint()}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm"
-              >
-                <Download className="w-4 h-4" />
-                <span>Export PDF</span>
-              </button>
             </div>
           )}
         </div>

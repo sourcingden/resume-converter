@@ -1,10 +1,23 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { ResumeData } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let ai: GoogleGenAI | null = null;
+
+function getAi() {
+  console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY);
+  if (!ai) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not set');
+    }
+    ai = new GoogleGenAI({ apiKey });
+  }
+  return ai;
+}
 
 export async function parseResume(text: string): Promise<ResumeData> {
-  const response = await ai.models.generateContent({
+  const aiClient = getAi();
+  const response = await aiClient.models.generateContent({
     model: 'gemini-3.1-pro-preview',
     contents: `Extract the following resume information into the requested JSON format.
     The output should be tailored for a senior developer profile, with a focus on technical skills and achievements.
